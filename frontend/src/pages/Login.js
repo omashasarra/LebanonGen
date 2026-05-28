@@ -73,6 +73,9 @@
             <p>Forget Password? Contact
               <a href="/#" className="register-link">samir.admin@lebanongen.com</a>
             </p>
+            <p>
+              <a href="/reset" className="register-link"> Reset Password</a>
+            </p>
           </div>
         </div>
       </div>

@@ -216,12 +216,12 @@ function CoupleForm() {
 
             <textarea
               name="HusbandfamilyHistory"
-              placeholder="Husband's Family Medical History"
+              placeholder="Is any member of the husband’s family affected"
               onChange={handleChange}
             />
             <textarea
               name="WifefamilyHistory"
-              placeholder="Wife's Family Medical History"
+              placeholder="Is any member of the wife’s family affected"
               onChange={handleChange}
             />
 

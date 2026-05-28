@@ -4,7 +4,6 @@ const axios = require("axios");
 
 module.exports = (db) => {
   // 1. AI CHATBOT ROUTE
-  // 1. AI CHATBOT ROUTE (Updated to save to assessment table)
   router.post("/ai-chat", async (req, res) => {
     const { coupleId, message } = req.body;
 
@@ -85,7 +84,7 @@ module.exports = (db) => {
     });
   });
 
-  // 2. LOGIN (Keeping your existing logic)
+  // 2. LOGIN 
   router.post("/login", (req, res) => {
     const { email, password } = req.body;
     const query = "SELECT * FROM couple WHERE Email = ? AND Password = ?";
@@ -102,7 +101,7 @@ module.exports = (db) => {
     });
   });
 
-  // 3. REGISTER (Keeping your existing logic)
+  // 3. REGISTER 
   router.post("/register", (req, res) => {
     const { email, password } = req.body;
     const checkUser = "SELECT * FROM couple WHERE Email = ?";
@@ -247,6 +246,56 @@ module.exports = (db) => {
       res.json(results);
     });
   });
+
+  router.post("/reset-password", (req, res) => {
+  const { email, oldPassword, newPassword } = req.body;
+
+  if (!email || !oldPassword || !newPassword) {
+    return res.status(400).json({
+      message: "All fields are required",
+    });
+  }
+
+  const checkQuery =
+    "SELECT * FROM couple WHERE Email = ? AND Password = ?";
+
+  db.execute(
+    checkQuery,
+    [email, oldPassword],
+    (err, results) => {
+      if (err) {
+        return res.status(500).json({
+          message: "Database error",
+        });
+      }
+
+      if (results.length === 0) {
+        return res.status(401).json({
+          message: "Invalid old password",
+        });
+      }
+
+      const updateQuery =
+        "UPDATE couple SET Password = ? WHERE Email = ?";
+
+      db.execute(
+        updateQuery,
+        [newPassword, email],
+        (updateErr) => {
+          if (updateErr) {
+            return res.status(500).json({
+              message: "Update failed",
+            });
+          }
+
+          return res.status(200).json({
+            message: "Password updated successfully",
+          });
+        }
+      );
+    }
+  );
+});
 
   return router;
 };

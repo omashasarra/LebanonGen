@@ -246,7 +246,7 @@ function MedicalConsultant() {
                       {/* Husband Card */}
                       <div className="border rounded-lg overflow-hidden">
                         <div className="bg-blue-50 px-4 py-3 border-b">
-                          <h3 className="font-semibold text-blue-800">👨 Husband</h3>
+                          <h3 className="font-semibold text-blue-800"> Husband</h3>
                         </div>
                         <div className="p-4 space-y-2 text-sm">
                           {selectedCouple.husband ? (
@@ -272,7 +272,7 @@ function MedicalConsultant() {
                       {/* Wife Card */}
                       <div className="border rounded-lg overflow-hidden">
                         <div className="bg-pink-50 px-4 py-3 border-b">
-                          <h3 className="font-semibold text-pink-800">👩 Wife</h3>
+                          <h3 className="font-semibold text-pink-800"> Wife</h3>
                         </div>
                         <div className="p-4 space-y-2 text-sm">
                           {selectedCouple.wife ? (

@@ -13,6 +13,7 @@ import MedicalConsultant from "./pages/MedicalConsultant";
 import GeneticResearcher from "./pages/GeneticResearcher";
 import SystemAdmin from "./pages/SystemAdmin";
 import ScrollToTop from "./utils/ScrollOnTop";
+import Reset from "./pages/Reset"
 import "leaflet/dist/leaflet.css";
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/drlog" element={<Drlog />} />
           <Route path="/chatbot" element={<ChatBot />} />
+          <Route path="/reset" element={<Reset />} />
 
           {/* Role-Based Dashboard Routes */}
           <Route path="/dashboard/consultant" element={<MedicalConsultant />} />
