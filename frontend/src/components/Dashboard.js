@@ -9,23 +9,25 @@ function Dashboard() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:5000/api/region-status-stats")  
+      .get(`${process.env.REACT_APP_API_URL}/api/admin/region-stats`)
       .then((res) => {
-        console.log("API Response:", res.data);
-        
+        console.log("Backend Raw Response Data:", res.data);
+
         const formatted = {};
-        
         res.data.forEach((item) => {
-          const total = Number(item.carriers) + Number(item.infected);
-          formatted[item.region] = total;
-          console.log(`${item.region}: ${item.carriers} carriers + ${item.infected} infected = ${total}`);
+          // ✅ Pack all classifications neatly under the exact database region string key
+          formatted[item.region] = {
+            carriers: Number(item.carriers || 0),
+            infected: Number(item.infected || 0),
+            total: Number(item.carriers || 0) + Number(item.infected || 0),
+          };
         });
-        
+
         setCases(formatted);
         setLoading(false);
       })
       .catch((err) => {
-        console.error("API Error:", err);
+        console.error("Dashboard Fetch Error:", err);
         setError(err.message);
         setLoading(false);
       });
@@ -33,34 +35,51 @@ function Dashboard() {
 
   if (loading) {
     return (
-      <div>
-        <h1 className="text-2xl font-bold mb-4">Genetic Cases by Region in Lebanon</h1>
-        <p>Loading map data...</p>
+      <div className="w-screen h-screen flex flex-col items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mb-4"></div>
+        <p className="text-gray-600 font-medium text-sm">
+          Synchronizing live GIS map modules...
+        </p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div>
-        <h1 className="text-2xl font-bold mb-4">Genetic Cases by Region in Lebanon</h1>
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          <p>Error: {error}</p>
-          <p className="text-sm mt-2">Make sure backend server is running on port 5000</p>
+      <div className="w-screen h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="bg-white p-6 rounded-xl shadow-xl border border-red-200 max-w-md w-full">
+          <h1 className="text-lg font-bold text-red-700 mb-2">
+            Map Interface Offline
+          </h1>
+          <p className="text-gray-600 text-xs mb-4">Details: {error}</p>
+          <p className="text-[11px] text-gray-400">
+            Please confirm your Express server is operating normally.
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Genetic Cases by Region in Lebanon</h1>
-      
-      {cases && Object.keys(cases).length > 0 ? (
-        <LebanonMap cases={cases} />
-      ) : (
-        <p>No data available</p>
-      )}
+    <div className="w-screen h-screen relative overflow-hidden bg-slate-900">
+      {/* 🧭 Floating Glassmorphic Info Card (Top Right) */}
+      <div className="absolute top-4 right-4 z-[1001] bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-xl border border-gray-200/80 max-w-sm pointer-events-auto">
+        <h1 className="text-sm font-bold text-gray-900 tracking-tight flex items-center gap-2">
+          📊 Website Test Diagnostics
+        </h1>
+        <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">
+          This interactive map dashboard displays real-time statistical
+          distributions based strictly on genetic screening tests taken directly
+          on this website.
+        </p>
+        <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+          <span>Server Link: Connected</span>
+          <span className="text-emerald-500 animate-pulse">● Live Stream</span>
+        </div>
+      </div>
+
+      {/* Full-bleed interactive canvas */}
+      <LebanonMap cases={cases} />
     </div>
   );
 }

@@ -1,131 +1,94 @@
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
+const bcrypt = require("bcrypt");
+
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL;
+
+function getBaseProbability(genotypeA, genotypeB) {
+  const pair = [genotypeA, genotypeB].sort().join("+");
+  const probabilities = {
+    "AA+AA": 0.0,
+    "AA+AS": 0.0,
+    "AA+SS": 0.0,
+    "AS+AS": 0.25,
+    "AS+SS": 0.5,
+    "SS+SS": 1.0,
+  };
+  return probabilities[pair] ?? 0.0;
+}
 
 module.exports = (db) => {
-  // 1. AI CHATBOT ROUTE
-  router.post("/ai-chat", async (req, res) => {
-    const { coupleId, message } = req.body;
-
-    if (!coupleId)
-      return res.status(400).json({ reply: "Please log in first." });
-
-    const sql = "SELECT Role, Genotype FROM person WHERE CoupleID = ?";
-
-    db.execute(sql, [coupleId], async (err, results) => {
-      if (err) {
-        console.error("DB Error:", err);
-        return res.status(500).json({ reply: "Database error." });
-      }
-
-      const context = results.length
-        ? results.map((r) => `${r.Role} Genotype: ${r.Genotype}`).join(", ")
-        : "No genetic data provided yet for this couple.";
-
-      try {
-        const response = await axios.post(
-          "https://api.groq.com/openai/v1/chat/completions",
-          {
-            model: "llama-3.3-70b-versatile",
-            messages: [
-              {
-                role: "system",
-                content: `You are a professional genetic counselor for LebanonGen.
-                
-                PATIENT CONTEXT: ${context}. 
-
-                STRICT RESPONSE GUIDELINES:
-                1. Use Bullet Points for all risks and recommendations.
-                2. Use **Bold Text** for genotypes and percentages.
-                3. Organize with Markdown headers.
-                4. ALWAYS end with a medical disclaimer.`,
-              },
-              { role: "user", content: message },
-            ],
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-          },
-        );
-
-        const aiReply = response.data.choices[0].message.content;
-
-        // --- NEW: SAVE TO ASSESSMENT TABLE ---
-        // We determine a simple risk level based on the AI's context for the database
-        const riskLevel =
-          aiReply.includes("100%") || aiReply.includes("SS")
-            ? "High Risk"
-            : "Moderate/Low Risk";
-
-        const saveSql = `
-          INSERT INTO assessment (CoupleID, RiskLevel, Recommendation, CreatedAt) 
-          VALUES (?, ?, ?, NOW())
-        `;
-
-        db.execute(saveSql, [coupleId, riskLevel, aiReply], (saveErr) => {
-          if (saveErr) {
-            console.error("Failed to save assessment:", saveErr);
-            // We still return the reply to the user even if saving fails
-          }
-          console.log("✅ Assessment results saved to database.");
-        });
-        // -------------------------------------
-
-        return res.status(200).json({ reply: aiReply });
-      } catch (error) {
-        console.error("GROQ AI ERROR:", error.response?.data || error.message);
-        return res.status(500).json({
-          reply: "The AI is currently unavailable. Please try again later.",
-        });
-      }
-    });
-  });
-
-  // 2. LOGIN 
+  // 1. LOGIN (bcrypt secure)
   router.post("/login", (req, res) => {
     const { email, password } = req.body;
-    const query = "SELECT * FROM couple WHERE Email = ? AND Password = ?";
+    const query = "SELECT * FROM couple WHERE Email = ?";
 
-    db.execute(query, [email, password], (err, results) => {
+    db.execute(query, [email], async (err, results) => {
       if (err) return res.status(500).json({ error: "Database error" });
-      if (results.length > 0) {
-        return res.status(200).json({
-          message: "Login successful",
-          user: { id: results[0].CoupleID, email: results[0].Email },
-        });
+
+      if (results.length === 0) {
+        return res.status(401).json({ message: "Invalid email or password" });
       }
-      return res.status(401).json({ message: "Invalid email or password" });
+
+      const user = results[0];
+
+      try {
+        const match = await bcrypt.compare(password, user.Password);
+        if (match) {
+          return res.status(200).json({
+            message: "Login successful",
+            user: { id: user.CoupleID, email: user.Email },
+          });
+        } else {
+          return res.status(401).json({ message: "Invalid email or password" });
+        }
+      } catch (bcryptErr) {
+        console.error("Login verification error:", bcryptErr);
+        return res.status(500).json({ error: "Internal validation failure" });
+      }
     });
   });
 
-  // 3. REGISTER 
+  // 2. REGISTER (bcrypt secure)
   router.post("/register", (req, res) => {
     const { email, password } = req.body;
     const checkUser = "SELECT * FROM couple WHERE Email = ?";
 
-    db.execute(checkUser, [email], (err, results) => {
+    db.execute(checkUser, [email], async (err, results) => {
       if (err) return res.status(500).json({ error: "Database error" });
       if (results.length > 0)
         return res.status(400).json({ message: "Email already registered" });
 
-      const query = "INSERT INTO couple (Email, Password) VALUES (?, ?)";
-      db.execute(query, [email, password], (err) => {
-        if (err) return res.status(500).json({ error: "Database error" });
+      try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const query = "INSERT INTO couple (Email, Password) VALUES (?, ?)";
+        db.execute(query, [email, hashedPassword], (insertErr) => {
+          if (insertErr)
+            return res.status(500).json({ error: "Database error" });
+          return res
+            .status(201)
+            .json({ message: "User registered successfully" });
+        });
+      } catch (hashErr) {
+        console.error("Registration hashing error:", hashErr);
         return res
-          .status(201)
-          .json({ message: "User registered successfully" });
-      });
+          .status(500)
+          .json({ error: "Failed to securely process registration" });
+      }
     });
   });
 
-  //  4. SAVE DATA & CALCULATE ASSESSMENT
+  // 3. SAVE DATA & CALCULATE ASSESSMENT USING ML FLASK SERVICE
   router.post("/save-couple-data", (req, res) => {
     const { coupleId, persons } = req.body;
 
-    // First Query: Save or Update person data in the 'person' table
+    if (!persons || persons.length < 2) {
+      return res.status(400).json({
+        message: "Incomplete couple data provided. Both partners required.",
+      });
+    }
+
     const personQuery = `
       INSERT INTO person 
       (CoupleID, Role, FullName, Gender, Genotype, BloodType, RhFactor, DateOfBirth, RegionID, FamilyHistory, HasAffectedChild) 
@@ -142,160 +105,247 @@ module.exports = (db) => {
       HasAffectedChild = VALUES(HasAffectedChild)
     `;
 
-    let completed = 0;
-    if (!persons || persons.length === 0)
-      return res.status(400).json({ message: "No data to save" });
+    const husband = persons.find((p) => p.role === "Husband");
+    const wife = persons.find((p) => p.role === "Wife");
 
-    persons.forEach((person) => {
-      db.execute(
+    // 1. Save Husband first
+    db.execute(
       personQuery,
       [
         coupleId,
-        person.role,
-        person.fullName,
-        person.gender,      
-        person.genotype,
-        person.bloodType,
-        person.rhFactor,
-        person.dob,
-        person.region,
-        person.familyHistory,
-        person.hasAffectedChild
+        husband.role,
+        husband.fullName,
+        husband.gender,
+        husband.genotype,
+        husband.bloodType,
+        husband.rhFactor,
+        husband.dob,
+        husband.region,
+        husband.familyHistory,
+        husband.hasAffectedChild,
       ],
-        (err) => {
-          if (err) console.error("Error saving person:", err);
-          completed++;
+      (err1) => {
+        if (err1) {
+          console.error("Error saving husband profile:", err1);
+          return res
+            .status(500)
+            .json({ error: "Failed to save partner records." });
+        }
 
-          // Once both Husband and Wife records are saved, calculate the assessment
-          if (completed === persons.length) {
-            
-            // --- CALCULATION LOGIC FOR SICKLE CELL ANEMIA ---
-            const husbandG = persons.find((p) => p.role === "Husband").genotype.toUpperCase();
-            const wifeG = persons.find((p) => p.role === "Wife").genotype.toUpperCase();
-
-            let probability = 0.0;
-            let riskLevel = "Low Risk";
-            let recommendation = "Genetically compatible for Sickle Cell Anemia.";
-
-            // Logic based on standard Punnett square results
-            if (husbandG === "AS" && wifeG === "AS") {
-              probability = 25.0;
-              riskLevel = "High Risk";
-              recommendation = "25% chance of offspring having Sickle Cell Anemia (SS). Genetic counseling recommended.";
-            } else if ((husbandG === "AS" && wifeG === "SS") || (husbandG === "SS" && wifeG === "AS")) {
-              probability = 50.0;
-              riskLevel = "Very High Risk";
-              recommendation = "50% chance of offspring having Sickle Cell Anemia (SS). Seek medical advice.";
-            } else if (husbandG === "SS" && wifeG === "SS") {
-              probability = 100.0;
-              riskLevel = "Critical";
-              recommendation = "100% chance of offspring having Sickle Cell Anemia (SS). High risk of inheritance.";
-            } else if (husbandG === "AA" && (wifeG === "AS" || wifeG === "SS") || wifeG === "AA" && (husbandG === "AS" || husbandG === "SS")) {
-              probability = 0.0;
-              riskLevel = "Carrier Risk";
-              recommendation = "No risk of SS disease in children, but offspring may be carriers (AS).";
+        // 2. Save Wife
+        db.execute(
+          personQuery,
+          [
+            coupleId,
+            wife.role,
+            wife.fullName,
+            wife.gender,
+            wife.genotype,
+            wife.bloodType,
+            wife.rhFactor,
+            wife.dob,
+            wife.region,
+            wife.familyHistory,
+            wife.hasAffectedChild,
+          ],
+          (err2) => {
+            if (err2) {
+              console.error("Error saving wife profile:", err2);
+              return res
+                .status(500)
+                .json({ error: "Failed to save partner records." });
             }
 
-            // Second Query: Save the final result into the 'assessment' table
-            const assessmentQuery = `
-              INSERT INTO assessment (CoupleID, Probability, RiskLevel, Recommendation, CreatedAt)
-              VALUES (?, ?, ?, ?, NOW())
-            `;
+            // 3. Call Flask ML model
+            const normalizeGenotype = (g) =>
+              g?.toUpperCase().split("").sort().join("");
 
-            db.execute(
-              assessmentQuery,
-              [coupleId, probability, riskLevel, recommendation],
-              (assessErr) => {
-                if (assessErr) {
-                  console.error("Assessment Save Error:", assessErr);
-                  return res.status(500).json({ error: "Data saved, but assessment entry failed." });
+            const mlPayload = {
+              base_probability: getBaseProbability(
+                normalizeGenotype(husband.genotype),
+                normalizeGenotype(wife.genotype),
+              ),
+              husband_familyHistory: husband.familyHistory ? 1 : 0,
+              wife_familyHistory: wife.familyHistory ? 1 : 0,
+              husband_hasAffectedChild: husband.hasAffectedChild ? 1 : 0,
+              wife_hasAffectedChild: wife.hasAffectedChild ? 1 : 0,
+            };
+
+            axios
+              .post(`${ML_SERVICE_URL}/predict`, mlPayload)
+              .then((mlResponse) => {
+                const probability = mlResponse.data.probability * 100 || 0.0;
+
+                let riskLevel = "Low Risk";
+                let recommendation =
+                  "Genetically compatible for Sickle Cell Anemia. No abnormal risks detected.";
+
+                if (probability >= 75.0) {
+                  riskLevel = "Critical";
+                  recommendation = `${probability.toFixed(1)}% chance of inheritance detected. High operational risk.`;
+                } else if (probability >= 45.0) {
+                  riskLevel = "Very High Risk";
+                  recommendation = `${probability.toFixed(1)}% chance of offspring inheriting Sickle Cell Anemia (SS). Seek medical advice.`;
+                } else if (probability >= 20.0) {
+                  riskLevel = "High Risk";
+                  recommendation = `${probability.toFixed(1)}% chance of offspring inheriting Sickle Cell Anemia (SS). Genetic counseling recommended.`;
+                } else if (probability >= 5.0) {
+                  // Only trigger carrier warning if there's an actual structural carrier presence (like AS traits)
+                  riskLevel = "Carrier Risk";
+                  recommendation =
+                    "Low direct disease risk, but offspring may be potential carriers.";
                 }
-                return res.status(200).json({
-                  message: "Data saved and assessment generated successfully!",
-                  assessment: { probability, riskLevel, recommendation }
+
+                const assessmentQuery = `
+                  INSERT INTO assessment (CoupleID, Probability, RiskLevel, Recommendation, CreatedAt)
+                  VALUES (?, ?, ?, ?, NOW())
+                `;
+
+                db.execute(
+                  assessmentQuery,
+                  [coupleId, probability, riskLevel, recommendation],
+                  (assessErr) => {
+                    if (assessErr) {
+                      console.error("Assessment Save Error:", assessErr);
+                      return res.status(500).json({
+                        error: "Data saved, but assessment log entry failed.",
+                      });
+                    }
+
+                    return res.status(200).json({
+                      message:
+                        "Data saved and ML assessment generated successfully!",
+                      assessment: { probability, riskLevel, recommendation },
+                    });
+                  },
+                );
+              })
+              .catch((mlError) => {
+                console.error(
+                  "Failed to fetch prediction from ML Service:",
+                  mlError.message,
+                );
+                return res.status(500).json({
+                  error:
+                    "Could not connect to the Machine Learning model service.",
                 });
-              }
-            );
-          }
-        }
-      );
-    });
+              });
+          },
+        );
+      },
+    );
   });
 
-   // 5. API to get region status stats for dashboard
-  router.get("/region-status-stats", (req, res) => {
-    const query = `
+  // 4. GET EXISTING ASSESSMENT FOR A COUPLE (locks the form on re-login)
+  router.get("/couple-assessment/:coupleId", (req, res) => {
+    const { coupleId } = req.params;
+
+    const sql = `
       SELECT 
-        r.Name as region,
-        r.RegionID,
-        COUNT(CASE WHEN p.Genotype = 'AS' THEN 1 END) as carriers,
-        COUNT(CASE WHEN p.Genotype = 'SS' THEN 1 END) as infected
-      FROM region r
-      LEFT JOIN person p ON r.RegionID = p.RegionID
-      GROUP BY r.RegionID, r.Name
-      ORDER BY r.RegionID
+        a.Probability, a.RiskLevel, a.Recommendation, a.CreatedAt,
+        p.Role, p.FullName, p.Genotype, p.BloodType, p.RhFactor,
+        p.DateOfBirth, p.FamilyHistory, p.HasAffectedChild,
+        r.Name as Region
+      FROM assessment a
+      JOIN couple c ON a.CoupleID = c.CoupleID
+      LEFT JOIN person p ON p.CoupleID = c.CoupleID
+      LEFT JOIN region r ON p.RegionID = r.RegionID
+      WHERE a.CoupleID = ?
+      ORDER BY a.CreatedAt DESC
     `;
-    
-    db.execute(query, (error, results) => {
-      if (error) {
-        console.error("Error fetching region stats:", error);
-        return res.status(500).json({ error: "Database error: " + error.message });
-      }
-      
-      console.log("Region stats results:", results);
-      res.json(results);
-    });
-  });
 
-  router.post("/reset-password", (req, res) => {
-  const { email, oldPassword, newPassword } = req.body;
-
-  if (!email || !oldPassword || !newPassword) {
-    return res.status(400).json({
-      message: "All fields are required",
-    });
-  }
-
-  const checkQuery =
-    "SELECT * FROM couple WHERE Email = ? AND Password = ?";
-
-  db.execute(
-    checkQuery,
-    [email, oldPassword],
-    (err, results) => {
+    db.execute(sql, [coupleId], (err, results) => {
       if (err) {
-        return res.status(500).json({
-          message: "Database error",
-        });
+        console.error("Error fetching assessment:", err);
+        return res.status(500).json({ error: "Database error" });
       }
 
       if (results.length === 0) {
-        return res.status(401).json({
-          message: "Invalid old password",
-        });
+        return res.status(404).json({ message: "No assessment found" });
       }
 
-      const updateQuery =
-        "UPDATE couple SET Password = ? WHERE Email = ?";
+      const first = results[0];
+      const data = {
+        assessment: {
+          probability: first.Probability,
+          riskLevel: first.RiskLevel,
+          recommendation: first.Recommendation,
+          createdAt: first.CreatedAt,
+        },
+        husband: null,
+        wife: null,
+      };
 
-      db.execute(
-        updateQuery,
-        [newPassword, email],
-        (updateErr) => {
-          if (updateErr) {
-            return res.status(500).json({
-              message: "Update failed",
-            });
-          }
-
-          return res.status(200).json({
-            message: "Password updated successfully",
-          });
+      results.forEach((row) => {
+        if (row.Role === "Husband") {
+          data.husband = {
+            fullName: row.FullName,
+            genotype: row.Genotype,
+            bloodType: row.BloodType,
+            rhFactor: row.RhFactor,
+            dateOfBirth: row.DateOfBirth,
+            familyHistory: row.FamilyHistory,
+            hasAffectedChild: row.HasAffectedChild,
+            region: row.Region,
+          };
+        } else if (row.Role === "Wife") {
+          data.wife = {
+            fullName: row.FullName,
+            genotype: row.Genotype,
+            bloodType: row.BloodType,
+            rhFactor: row.RhFactor,
+            dateOfBirth: row.DateOfBirth,
+            familyHistory: row.FamilyHistory,
+            hasAffectedChild: row.HasAffectedChild,
+            region: row.Region,
+          };
         }
-      );
+      });
+
+      return res.status(200).json(data);
+    });
+  });
+
+
+  // 6. RESET PASSWORD (bcrypt secure)
+  router.post("/reset-password", (req, res) => {
+    const { email, oldPassword, newPassword } = req.body;
+
+    if (!email || !oldPassword || !newPassword) {
+      return res.status(400).json({ message: "All fields are required" });
     }
-  );
-});
+
+    const checkQuery = "SELECT * FROM couple WHERE Email = ?";
+
+    db.execute(checkQuery, [email], async (err, results) => {
+      if (err) return res.status(500).json({ message: "Database error" });
+
+      if (results.length === 0) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      try {
+        const match = await bcrypt.compare(oldPassword, results[0].Password);
+        if (!match) {
+          return res.status(401).json({ message: "Invalid old password" });
+        }
+
+        const hashedNew = await bcrypt.hash(newPassword, 10);
+        const updateQuery = "UPDATE couple SET Password = ? WHERE Email = ?";
+
+        db.execute(updateQuery, [hashedNew, email], (updateErr) => {
+          if (updateErr)
+            return res.status(500).json({ message: "Update failed" });
+          return res
+            .status(200)
+            .json({ message: "Password updated successfully" });
+        });
+      } catch (bcryptErr) {
+        console.error("Password reset error:", bcryptErr);
+        return res.status(500).json({ message: "Internal error" });
+      }
+    });
+  });
 
   return router;
 };

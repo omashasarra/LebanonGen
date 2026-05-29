@@ -24,7 +24,7 @@ function SystemAdmin() {
   const fetchUsers = () => {
     setLoading(true);
     axios
-      .get("http://localhost:5000/api/admin/users-overview")
+      .get(`${process.env.REACT_APP_API_URL}/api/admin/users-overview`)
       .then((res) => {
         setUsers(res.data);
         setLoading(false);
@@ -37,20 +37,26 @@ function SystemAdmin() {
 
   // Reset password function - sets password to email
   const handleResetPassword = async (email, userType, userName) => {
-    if (!window.confirm(`Reset password for ${email}?\n\nThe password will be set to their email address.`)) {
+    if (
+      !window.confirm(
+        `Reset password for ${email}?\n\nThe password will be set to their email address.`,
+      )
+    ) {
       return;
     }
 
     setResettingEmail(email);
-    
+
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/admin/reset-password",
-        { email, userType, userName }
+        `${process.env.REACT_APP_API_URL}/api/admin/reset-password`,
+        { email, userType, userName },
       );
-      
+
       if (response.status === 200) {
-        alert(`✅ Password reset successful!\n\nPassword for ${email} has been set to: ${email}\n\nPlease inform the user to login with their email as password.`);
+        alert(
+          `✅ Password reset successful!\n\nPassword for ${email} has been set to: ${email}\n\nPlease inform the user to login with their email as password.`,
+        );
       }
     } catch (error) {
       console.error("Reset password error:", error);
@@ -62,14 +68,20 @@ function SystemAdmin() {
 
   // Delete staff only (not couples)
   const handleDeleteStaff = (email, name) => {
-    if (!window.confirm(`Are you sure you want to delete staff member: ${name || email}?\n\nThis action cannot be undone.`)) {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete staff member: ${name || email}?\n\nThis action cannot be undone.`,
+      )
+    ) {
       return;
     }
 
     setDeletingId(email);
-    
+
     axios
-      .delete(`http://localhost:5000/api/admin/delete-staff/${email}`)
+      .delete(
+        `${process.env.REACT_APP_API_URL}/api/admin/delete-staff/${email}`,
+      )
       .then(() => {
         setUsers(users.filter((u) => u.Email !== email));
         alert("✅ Staff member deleted successfully");
@@ -166,7 +178,9 @@ function SystemAdmin() {
                         {u.Name?.charAt(0) || u.Email.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{u.Name || "N/A"}</p>
+                        <p className="font-medium text-gray-900">
+                          {u.Name || "N/A"}
+                        </p>
                         <p className="text-sm text-gray-500">{u.Email}</p>
                         <span className="inline-block mt-1 px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs">
                           {u.Role || "Staff"}
@@ -177,7 +191,9 @@ function SystemAdmin() {
                     <div className="flex items-center space-x-3">
                       {/* Reset Password Button for Staff */}
                       <button
-                        onClick={() => handleResetPassword(u.Email, "staff", u.Name)}
+                        onClick={() =>
+                          handleResetPassword(u.Email, "staff", u.Name)
+                        }
                         disabled={resettingEmail === u.Email}
                         className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -188,8 +204,18 @@ function SystemAdmin() {
                           </>
                         ) : (
                           <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                              />
                             </svg>
                             <span>Reset Password</span>
                           </>
@@ -209,8 +235,18 @@ function SystemAdmin() {
                           </>
                         ) : (
                           <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
                             </svg>
                             <span>Delete</span>
                           </>
@@ -232,7 +268,8 @@ function SystemAdmin() {
                 Registered Couples
               </h3>
               <p className="text-sm text-gray-500 mt-1">
-                Reset couple passwords - password will be set to their email address
+                Reset couple passwords - password will be set to their email
+                address
               </p>
             </div>
             <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">
@@ -268,7 +305,9 @@ function SystemAdmin() {
                     <div className="flex items-center space-x-3">
                       {/* Only Reset Password Button for Couples - sets password to their email */}
                       <button
-                        onClick={() => handleResetPassword(u.Email, "couple", null)}
+                        onClick={() =>
+                          handleResetPassword(u.Email, "couple", null)
+                        }
                         disabled={resettingEmail === u.Email}
                         className="bg-orange-50 text-orange-600 px-4 py-2 rounded-lg hover:bg-orange-100 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -279,8 +318,18 @@ function SystemAdmin() {
                           </>
                         ) : (
                           <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                              />
                             </svg>
                             <span>Reset Password</span>
                           </>
@@ -299,12 +348,18 @@ function SystemAdmin() {
           <div className="flex items-start space-x-3">
             <div className="text-blue-600 text-xl">ℹ️</div>
             <div>
-              <p className="text-sm text-blue-800 font-medium">Admin Permissions</p>
+              <p className="text-sm text-blue-800 font-medium">
+                Admin Permissions
+              </p>
               <p className="text-xs text-blue-600 mt-1">
-                • You can delete staff members only (doctors, researchers, consultants)<br/>
-                • Password reset for couples sets their password to their email address<br/>
-                • Password reset for staff generates a random temporary password<br/>
-                • Couple accounts cannot be deleted from the admin panel
+                • You can delete staff members only (doctors, researchers,
+                consultants)
+                <br />
+                • Password reset for couples sets their password to their email
+                address
+                <br />
+                • Password reset for staff generates a random temporary password
+                <br />• Couple accounts cannot be deleted from the admin panel
               </p>
             </div>
           </div>

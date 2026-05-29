@@ -20,7 +20,7 @@ function Drlog() {
     e.preventDefault();
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/admin/doctor-login",
+        `${process.env.REACT_APP_API_URL}/api/admin/doctor-login`,
         formData,
       );
 

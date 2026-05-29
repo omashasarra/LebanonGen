@@ -20,8 +20,8 @@ function GeneticResearcher() {
     const fetchData = async () => {
       try {
         const [regionRes, overallRes] = await Promise.all([
-          axios.get("http://localhost:5000/api/admin/genetic-region-stats"),
-          axios.get("http://localhost:5000/api/admin/genetic-overall-stats")
+          axios.get(`${process.env.REACT_APP_API_URL}/api/admin/genetic-region-stats`),
+          axios.get(`${process.env.REACT_APP_API_URL}/api/admin/genetic-overall-stats`)
         ]);
         
         console.log("Region stats:", regionRes.data);

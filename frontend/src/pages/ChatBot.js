@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import ReactMarkdown from "react-markdown"; // New import
+import ReactMarkdown from "react-markdown";
 import { Send, Bot, User, ShieldAlert, Info } from "lucide-react";
 
 function ChatBot() {
@@ -40,7 +40,7 @@ function ChatBot() {
     setIsTyping(true);
 
     try {
-      const response = await axios.post("http://localhost:5000/api/ai-chat", {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/ai/chat`, {
         coupleId,
         message: input,
       });

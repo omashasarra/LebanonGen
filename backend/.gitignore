@@ -1,2 +1,13 @@
-.env
+# Dependencies (Matches any node_modules folder at any level)
 node_modules/
+
+# Environment Variables & Secrets
+.env
+
+# Python / Virtual Environments
+.venv/
+__pycache__/
+*.pyc
+
+# Editor Settings
+.vscode/

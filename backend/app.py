@@ -1,37 +1,41 @@
 from flask import Flask, request, jsonify
 import joblib
-import pandas as pd
-import os
+import numpy as np
 
 app = Flask(__name__)
 
-# Get the directory where app.py is located
-base_path = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(base_path, 'model.pkl')
+# Load the enhanced 5-feature model
+model = joblib.load('model.pkl')
 
-# Load the model using the full path
-model = joblib.load(model_path)
+@app.route('/', methods=['GET'])
+def home():
+    return "Genetic Counseling ML Model API is running successfully!"
 
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        data = request.json
-        # Create a DataFrame with the exact column names from your CSV
-        input_data = pd.DataFrame([{
-            'base_probability': data['base_probability'],
-            'familyHistory': data['familyHistory'],
-            'hasAffectedChild': data['hasAffectedChild']
-        }])
+        data = request.get_json()
         
-        prediction = model.predict(input_data)
+        # Sequentially unpack all 5 individual feature flags
+        features = [
+            float(data.get('base_probability', 0.0)),
+            int(data.get('husband_familyHistory', 0)),
+            int(data.get('wife_familyHistory', 0)),
+            int(data.get('husband_hasAffectedChild', 0)),
+            int(data.get('wife_hasAffectedChild', 0))
+        ]
         
-        # Ensure the probability stays between 0 and 1
-        result = max(0, min(1, prediction[0]))
+        # Reshape to match scikit-learn standard structure 
+        input_data = np.array([features])
         
-        return jsonify({'probability': round(float(result), 3)})
+        # Predict probability outcome bounded strictly between 0 and 1
+        predicted_val = model.predict(input_data)[0]
+        probability = float(np.clip(predicted_val, 0.0, 1.0))
+        
+        return jsonify({'probability': probability})
+        
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    # Use port 5001 to avoid conflict with your Node.js (5000)
-    app.run(port=5001, debug=True)
+    app.run(host='0.0.0.0', port=7860, debug=True)

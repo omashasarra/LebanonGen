@@ -11,7 +11,7 @@ function Home() {
       <section className="hero">
         <div className="hero-overlay">
           <h1>Empowering Families Through Genetics</h1>
-          <Link to="/form" className="cta-btn">
+          <Link to="/login" className="cta-btn">
             Get Started
           </Link>
         </div>
