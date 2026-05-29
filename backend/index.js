@@ -12,10 +12,12 @@ app.use(express.json());
 
 // 1. Database Connection
 const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "", // Change this if you have a MySQL password
-  database: "lebanongenes",
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT,
+  ssl: { rejectUnauthorized: false },
 });
 
 db.connect((err) => {
@@ -30,9 +32,7 @@ app.use("/api", coupleRoutes(db));
 app.use("/api/ai", groqRoutes(db));
 app.use("/api/admin", adminRoutes(db));
 
-// 3. Keep the Server Alive
-const PORT = 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 SERVER IS LIVE AT: http://localhost:${PORT}`);
-  console.log("   Press Ctrl + C to stop the server");
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 SERVER IS LIVE AT: http://0.0.0.0:${PORT}`);
 });
