@@ -12,10 +12,9 @@ function Dashboard() {
       .get(`${process.env.REACT_APP_API_URL}/api/admin/region-stats`)
       .then((res) => {
         console.log("Backend Raw Response Data:", res.data);
-
+        console.log("Is Array?", Array.isArray(res.data));
         const formatted = {};
         res.data.forEach((item) => {
-          // ✅ Pack all classifications neatly under the exact database region string key
           formatted[item.region] = {
             carriers: Number(item.carriers || 0),
             infected: Number(item.infected || 0),
