@@ -11,7 +11,10 @@ const app = express();
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: [
+      "http://localhost:3000",
+      "https://your-app-name.vercel.app"  // replace with your actual Vercel URL
+    ],
     credentials: true,
   })
 );
@@ -30,7 +33,7 @@ const db = mysql.createConnection({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port: process.env.DB_PORT,
-  ssl: { rejectUnauthorized: false },
+  // ssl: { rejectUnauthorized: false },
 });
 
 db.connect((err) => {

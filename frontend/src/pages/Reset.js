@@ -110,7 +110,7 @@ function Reset() {
         <div className="form-footer">
           <p>
             Back to
-            <a href="/" className="register-link">
+            <a href="/login" className="register-link">
               {" "}
               Sign In
             </a>

@@ -4,9 +4,15 @@ const axios = require("axios");
 
 module.exports = (db) => {
   router.post("/chat", (req, res) => {
+    console.log("=== CHATBOT REQUEST ===");
+    console.log("Body:", req.body);
+    console.log("GROQ KEY EXISTS:", !!process.env.GROQ_API_KEY);
+    console.log("GROQ KEY VALUE:", process.env.GROQ_API_KEY);
+
     const { message, coupleId } = req.body;
 
     if (!message || !coupleId) {
+      console.log("Missing message or coupleId");
       return res
         .status(400)
         .json({ error: "Message and CoupleID are required" });
@@ -21,9 +27,13 @@ module.exports = (db) => {
           return res.status(500).json({ error: "Database error." });
         }
 
+        console.log("Person rows found:", rows);
+
         const context = rows.length
           ? rows.map((r) => `${r.Role}: ${r.Genotype}`).join(", ")
           : "No genetic data found.";
+
+        console.log("Context being sent to Groq:", context);
 
         try {
           const response = await axios.post(
@@ -51,17 +61,26 @@ module.exports = (db) => {
                 Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
                 "Content-Type": "application/json",
               },
-            },
+            }
           );
 
+          console.log("✅ Groq response received successfully");
           return res.json({ reply: response.data.choices[0].message.content });
+
         } catch (aiError) {
-          console.error("AI ROUTE ERROR:", aiError.message);
-          return res
-            .status(500)
-            .json({ error: "AI service is temporarily unavailable." });
+          // This will show the EXACT error Groq sends back
+          console.error("❌ GROQ ERROR STATUS:", aiError.response?.status);
+          console.error("❌ GROQ ERROR DATA:", aiError.response?.data);
+          console.error("❌ GROQ ERROR MESSAGE:", aiError.message);
+
+          // Send specific error message based on what went wrong
+          const groqError = aiError.response?.data?.error?.message;
+          return res.status(500).json({ 
+            error: "AI service is temporarily unavailable.",
+            details: groqError || aiError.message
+          });
         }
-      },
+      }
     );
   });
 

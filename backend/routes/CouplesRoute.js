@@ -306,6 +306,21 @@ module.exports = (db) => {
     });
   });
 
+// 5.LEBANON MAP: Region stats for the public dashboard map
+router.get("/map-region-stats", (req, res) => {
+  const sql = `
+    SELECT r.Name AS region, 
+    SUM(CASE WHEN p.Genotype = 'AS' THEN 1 ELSE 0 END) as carriers,
+    SUM(CASE WHEN p.Genotype = 'SS' THEN 1 ELSE 0 END) as infected
+    FROM region r
+    LEFT JOIN person p ON r.RegionID = p.RegionID
+    GROUP BY r.RegionID, r.Name
+  `;
+  db.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(results);
+  });
+});
 
   // 6. RESET PASSWORD (bcrypt secure)
   router.post("/reset-password", (req, res) => {

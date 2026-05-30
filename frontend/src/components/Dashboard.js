@@ -9,7 +9,7 @@ function Dashboard() {
 
   useEffect(() => {
     axios
-      .get(`${process.env.REACT_APP_API_URL}/api/admin/region-stats`)
+      .get(`${process.env.REACT_APP_API_URL}/api/map-region-stats`)
       .then((res) => {
         console.log("Backend Raw Response Data:", res.data);
         console.log("Is Array?", Array.isArray(res.data));
