@@ -26,7 +26,7 @@
 
       if (response.ok) {
           // SAVE the ID to localStorage so the form can find it
-          localStorage.setItem("coupleID", data.user.id);   
+          localStorage.setItem("coupleId", data.user.id);   
           navigate("/form"); 
         } else {
           alert(data.message || "Login failed");
@@ -72,7 +72,7 @@
             </p>
             <div style={{ textAlign: "center" }}>
             <a
-              href="/help"
+              href="mailto:samer.fares@lebanongen.com"
               style={{
                 fontSize: "0.85rem",
                 color: "#666565",

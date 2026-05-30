@@ -124,7 +124,7 @@ function Drlog() {
 
           <div style={{ marginTop: "20px", textAlign: "center" }}>
             <a
-              href="/help"
+              href="mailto:samer.fares@lebanongen.com"
               style={{
                 fontSize: "0.8rem",
                 color: "#999",
