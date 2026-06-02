@@ -25,10 +25,12 @@
         const data = await response.json();
 
       if (response.ok) {
-          // SAVE the ID to localStorage so the form can find it
-          localStorage.setItem("coupleId", data.user.id);   
-          navigate("/form"); 
-        } else {
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("coupleID", data.user.id);
+        localStorage.setItem("userEmail", data.user.email);
+
+        navigate("/form");
+      } else {
           alert(data.message || "Login failed");
         }
       } catch (error) {

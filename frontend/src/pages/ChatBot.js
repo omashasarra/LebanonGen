@@ -1,9 +1,20 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import { Send, Bot, User, ShieldAlert, Info } from "lucide-react";
 
 function ChatBot() {
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    const loggedIn =
+      localStorage.getItem("isLoggedIn") === "true";
+
+    if (!loggedIn) {
+      navigate("/login");
+    }
+  }, [navigate]);
   const [messages, setMessages] = useState([
     {
       sender: "bot",
@@ -17,7 +28,7 @@ function ChatBot() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef(null);
-  const coupleId = localStorage.getItem("coupleId");
+  const coupleId = localStorage.getItem("coupleID");
 
   const scrollToBottom = () =>
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });

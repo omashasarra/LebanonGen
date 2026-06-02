@@ -12,7 +12,7 @@ const app = express();
 app.use(
   cors({
     origin: [
-      "https://lebanon-gen.vercel.app",  
+      "https://lebanon-gen.vercel.app"
     ],
     credentials: true,
   })
