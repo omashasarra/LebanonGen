@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import DashboardHeader from "../components/DashboardHeader";
 
 function SystemAdmin() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (localStorage.getItem("drEmail") === null) navigate("/drlog");
+  }, [navigate]);
   const [users, setUsers] = useState([]);
   const [userEmail, setUserEmail] = useState("");
   const [userRole, setUserRole] = useState("");

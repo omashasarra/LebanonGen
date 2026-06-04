@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import DashboardHeader from "../components/DashboardHeader";
 
 function GeneticResearcher() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (localStorage.getItem("drEmail") === null) navigate("/drlog");
+  }, [navigate]);
   const [regionStats, setRegionStats] = useState([]);
   const [overallStats, setOverallStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,13 +26,17 @@ function GeneticResearcher() {
     const fetchData = async () => {
       try {
         const [regionRes, overallRes] = await Promise.all([
-          axios.get(`${process.env.REACT_APP_API_URL}/api/admin/genetic-region-stats`),
-          axios.get(`${process.env.REACT_APP_API_URL}/api/admin/genetic-overall-stats`)
+          axios.get(
+            `${process.env.REACT_APP_API_URL}/api/admin/genetic-region-stats`,
+          ),
+          axios.get(
+            `${process.env.REACT_APP_API_URL}/api/admin/genetic-overall-stats`,
+          ),
         ]);
-        
+
         console.log("Region stats:", regionRes.data);
         console.log("Overall stats:", overallRes.data);
-        
+
         setRegionStats(regionRes.data);
         setOverallStats(overallRes.data);
         setLoading(false);
@@ -35,12 +45,14 @@ function GeneticResearcher() {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, []);
 
   // Calculate totals from overallStats
-  const totalRegions = regionStats.filter(r => r.total_individuals > 0).length;
+  const totalRegions = regionStats.filter(
+    (r) => r.total_individuals > 0,
+  ).length;
   const totalCarriers = overallStats?.total_carriers || 0;
   const totalInfected = overallStats?.total_infected || 0;
   const totalNormal = overallStats?.total_normal || 0;
@@ -76,9 +88,7 @@ function GeneticResearcher() {
                   Total Regions
                 </p>
                 <p className="text-4xl font-bold mt-2">{totalRegions}</p>
-                <p className="text-gray-100 text-xs mt-1">
-                  Geographic areas
-                </p>
+                <p className="text-gray-100 text-xs mt-1">Geographic areas</p>
               </div>
               <div className="text-4xl">🗺️</div>
             </div>
@@ -91,9 +101,7 @@ function GeneticResearcher() {
                   Normal (AA)
                 </p>
                 <p className="text-4xl font-bold mt-2">{totalNormal}</p>
-                <p className="text-green-100 text-xs mt-1">
-                  No genetic issues
-                </p>
+                <p className="text-green-100 text-xs mt-1">No genetic issues</p>
               </div>
               <div className="text-4xl">✅</div>
             </div>
@@ -121,9 +129,7 @@ function GeneticResearcher() {
                   Infected (SS)
                 </p>
                 <p className="text-4xl font-bold mt-2">{totalInfected}</p>
-                <p className="text-red-100 text-xs mt-1">
-                  Sickle cell disease
-                </p>
+                <p className="text-red-100 text-xs mt-1">Sickle cell disease</p>
               </div>
               <div className="text-4xl">⚠️</div>
             </div>
@@ -149,18 +155,23 @@ function GeneticResearcher() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {regionStats.map((region) => {
             const hasData = region.total_individuals > 0;
-            
+
             return (
               <div
                 key={region.RegionID}
                 className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
               >
-                <div className={`px-6 py-4 ${
-                  region.risk_level === "HIGH RISK" ? "bg-red-500" :
-                  region.risk_level === "MODERATE RISK" ? "bg-orange-500" :
-                  region.risk_level === "ELEVATED RISK" ? "bg-yellow-500" :
-                  "bg-green-500"
-                }`}>
+                <div
+                  className={`px-6 py-4 ${
+                    region.risk_level === "HIGH RISK"
+                      ? "bg-red-500"
+                      : region.risk_level === "MODERATE RISK"
+                        ? "bg-orange-500"
+                        : region.risk_level === "ELEVATED RISK"
+                          ? "bg-yellow-500"
+                          : "bg-green-500"
+                  }`}
+                >
                   <h3 className="text-lg font-semibold text-white">
                     {region.Name}
                   </h3>
@@ -180,9 +191,13 @@ function GeneticResearcher() {
                     <div className="flex justify-between items-center mb-2">
                       <div className="flex items-center">
                         <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                        <span className="text-sm font-medium text-gray-700">Normal (AA)</span>
+                        <span className="text-sm font-medium text-gray-700">
+                          Normal (AA)
+                        </span>
                       </div>
-                      <span className="text-xl font-bold text-green-600">{region.normal || 0}</span>
+                      <span className="text-xl font-bold text-green-600">
+                        {region.normal || 0}
+                      </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
@@ -190,7 +205,9 @@ function GeneticResearcher() {
                         style={{ width: `${region.normal_percentage || 0}%` }}
                       ></div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">{region.normal_percentage || 0}% of individuals</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {region.normal_percentage || 0}% of individuals
+                    </p>
                   </div>
 
                   {/* Carriers (AS) */}
@@ -198,9 +215,13 @@ function GeneticResearcher() {
                     <div className="flex justify-between items-center mb-2">
                       <div className="flex items-center">
                         <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-                        <span className="text-sm font-medium text-gray-700">Carriers (AS)</span>
+                        <span className="text-sm font-medium text-gray-700">
+                          Carriers (AS)
+                        </span>
                       </div>
-                      <span className="text-xl font-bold text-yellow-600">{region.carriers || 0}</span>
+                      <span className="text-xl font-bold text-yellow-600">
+                        {region.carriers || 0}
+                      </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
@@ -208,7 +229,9 @@ function GeneticResearcher() {
                         style={{ width: `${region.carrier_percentage || 0}%` }}
                       ></div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">{region.carrier_percentage || 0}% of individuals</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {region.carrier_percentage || 0}% of individuals
+                    </p>
                   </div>
 
                   {/* Infected (SS) */}
@@ -216,9 +239,13 @@ function GeneticResearcher() {
                     <div className="flex justify-between items-center mb-2">
                       <div className="flex items-center">
                         <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                        <span className="text-sm font-medium text-gray-700">Infected (SS)</span>
+                        <span className="text-sm font-medium text-gray-700">
+                          Infected (SS)
+                        </span>
                       </div>
-                      <span className="text-xl font-bold text-red-600">{region.infected || 0}</span>
+                      <span className="text-xl font-bold text-red-600">
+                        {region.infected || 0}
+                      </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
@@ -226,7 +253,9 @@ function GeneticResearcher() {
                         style={{ width: `${region.infected_percentage || 0}%` }}
                       ></div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">{region.infected_percentage || 0}% of individuals</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {region.infected_percentage || 0}% of individuals
+                    </p>
                   </div>
                 </div>
               </div>
@@ -242,27 +271,35 @@ function GeneticResearcher() {
 
         {/* Legend */}
         <div className="mt-8 p-4 bg-gray-100 rounded-lg">
-          <p className="text-sm font-semibold text-gray-700 mb-2">📊 Genetic Status Legend:</p>
+          <p className="text-sm font-semibold text-gray-700 mb-2">
+            📊 Genetic Status Legend:
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div className="flex items-start">
               <div className="w-4 h-4 bg-green-500 rounded-full mr-2 mt-0.5"></div>
               <div>
                 <span className="font-medium text-gray-800">AA (Normal)</span>
-                <p className="text-xs text-gray-500">No sickle cell trait or disease</p>
+                <p className="text-xs text-gray-500">
+                  No sickle cell trait or disease
+                </p>
               </div>
             </div>
             <div className="flex items-start">
               <div className="w-4 h-4 bg-yellow-500 rounded-full mr-2 mt-0.5"></div>
               <div>
                 <span className="font-medium text-gray-800">AS (Carrier)</span>
-                <p className="text-xs text-gray-500">Sickle cell trait - usually asymptomatic</p>
+                <p className="text-xs text-gray-500">
+                  Sickle cell trait - usually asymptomatic
+                </p>
               </div>
             </div>
             <div className="flex items-start">
               <div className="w-4 h-4 bg-red-500 rounded-full mr-2 mt-0.5"></div>
               <div>
                 <span className="font-medium text-gray-800">SS (Infected)</span>
-                <p className="text-xs text-gray-500">Sickle cell disease - requires medical care</p>
+                <p className="text-xs text-gray-500">
+                  Sickle cell disease - requires medical care
+                </p>
               </div>
             </div>
           </div>
