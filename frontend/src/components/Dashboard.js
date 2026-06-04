@@ -6,13 +6,12 @@ function Dashboard() {
   const [cases, setCases] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     axios
       .get(`${process.env.REACT_APP_API_URL}/api/map-region-stats`)
       .then((res) => {
-        console.log("Backend Raw Response Data:", res.data);
-        console.log("Is Array?", Array.isArray(res.data));
         const formatted = {};
         res.data.forEach((item) => {
           formatted[item.region] = {
@@ -21,12 +20,10 @@ function Dashboard() {
             total: Number(item.carriers || 0) + Number(item.infected || 0),
           };
         });
-
         setCases(formatted);
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Dashboard Fetch Error:", err);
         setError(err.message);
         setLoading(false);
       });
@@ -34,9 +31,9 @@ function Dashboard() {
 
   if (loading) {
     return (
-      <div className="w-screen h-screen flex flex-col items-center justify-center bg-gray-50">
+      <div className="w-screen h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mb-4"></div>
-        <p className="text-gray-600 font-medium text-sm">
+        <p className="text-gray-600 font-medium text-sm text-center">
           Synchronizing live GIS map modules...
         </p>
       </div>
@@ -61,19 +58,44 @@ function Dashboard() {
 
   return (
     <div className="w-screen h-screen relative overflow-hidden bg-slate-900">
-      {/* 🧭 Floating Glassmorphic Info Card (Top Right) */}
-      <div className="absolute top-4 right-4 z-[1001] bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-xl border border-gray-200/80 max-w-sm pointer-events-auto">
-        <h1 className="text-sm font-bold text-gray-900 tracking-tight flex items-center gap-2">
-          📊 Website Test Diagnostics
-        </h1>
-        <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">
-          This interactive map dashboard displays real-time statistical
-          distributions based strictly on genetic screening tests taken directly
-          on this website.
-        </p>
-        <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-          <span>Server Link: Connected</span>
-          <span className="text-emerald-500 animate-pulse">● Live Stream</span>
+      {/* ── Info Card ── */}
+      <div
+        className="
+          absolute z-[1001] pointer-events-auto
+          bg-white/95 backdrop-blur-md shadow-xl border border-gray-200/80 rounded-xl
+          /* mobile: bottom strip, full width */
+          bottom-0 left-0 right-0
+          /* tablet+: top-right floating card */
+          sm:bottom-auto sm:top-4 sm:left-auto sm:right-4 sm:max-w-xs sm:w-auto
+        "
+      >
+        {/* Header row — always visible */}
+        <div
+          className="flex items-center justify-between px-4 py-3 cursor-pointer sm:cursor-default"
+          onClick={() => setCollapsed((c) => !c)}
+        >
+          <h1 className="text-sm font-bold text-gray-900 tracking-tight flex items-center gap-2">
+            📊 Website Test Diagnostics
+          </h1>
+          {/* Toggle chevron — only visible on mobile */}
+          <span className="sm:hidden text-gray-400 text-xs select-none">
+            {collapsed ? "▲" : "▼"}
+          </span>
+        </div>
+
+        {/* Collapsible body */}
+        <div className={`${collapsed ? "hidden" : "block"} sm:block px-4 pb-4`}>
+          <p className="text-xs text-gray-600 leading-relaxed">
+            This interactive map dashboard displays real-time statistical
+            distributions based strictly on genetic screening tests taken
+            directly on this website.
+          </p>
+          <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+            <span>Server Link: Connected</span>
+            <span className="text-emerald-500 animate-pulse">
+              ● Live Stream
+            </span>
+          </div>
         </div>
       </div>
 

@@ -125,7 +125,10 @@ const footerStyles = `
     font-size: 13px; color: rgba(255,255,255,0.45); font-weight: 300;
     padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
     line-height: 1.5;
+    text-decoration: none;
+    transition: color 0.2s;
   }
+  .ft-contact-row:hover { color: #fecaca; }
   .ft-contact-icon {
     width: 26px; height: 26px; border-radius: 7px;
     background: rgba(127,29,29,0.35); border: 1px solid rgba(185,28,28,0.3);
@@ -214,7 +217,6 @@ export default function Footer() {
                 { to: "/about", label: "About Us" },
                 { to: "/dashboard", label: "Health Dashboard" },
                 { to: "/login", label: "Patient Login" },
-                { to: "/drlog", label: "Staff Portal" },
               ].map(({ to, label }) => (
                 <Link key={to} to={to} className="ft-nav-link">
                   {label}
@@ -227,16 +229,24 @@ export default function Footer() {
           <div>
             <h4 className="ft-col-title">Contact Us</h4>
             <div>
-              {[
-                { icon: <MdLocationOn />, text: "Beirut, Lebanon" },
-                { icon: <MdEmail />, text: "sickle@lebanongen.com" },
-                { icon: <MdPhone />, text: "+961 71 123 456" },
-              ].map(({ icon, text }, i) => (
-                <div key={i} className="ft-contact-row">
-                  <div className="ft-contact-icon">{icon}</div>
-                  <span>{text}</span>
+              <div className="ft-contact-row">
+                <div className="ft-contact-icon">
+                  <MdLocationOn />
                 </div>
-              ))}
+                <span>Beirut, Lebanon</span>
+              </div>
+              <a href="mailto:sickle@lebanongen.com" className="ft-contact-row">
+                <div className="ft-contact-icon">
+                  <MdEmail />
+                </div>
+                <span>sickle@lebanongen.com</span>
+              </a>
+              <a href="tel:+96171123456" className="ft-contact-row">
+                <div className="ft-contact-icon">
+                  <MdPhone />
+                </div>
+                <span>+961 71 123 456</span>
+              </a>
             </div>
           </div>
         </div>
